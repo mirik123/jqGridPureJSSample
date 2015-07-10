@@ -9,7 +9,7 @@ $(document).ready(function () {
 
         if ($('#' + options.gid).getGridParam('datatype') === 'xml') {
             var xmlvalue = $(options.colModel.name, rowObject);
-            cellvalue = $.jgrid.ODataHelper.convertXmlToJson(xmlvalue[0]);
+            cellvalue = $.jgrid.odataHelper.convertXmlToJson(xmlvalue[0]);
         }
 
         if (!$.isPlainObject(cellvalue)) {
@@ -29,48 +29,7 @@ $(document).ready(function () {
         return '<span class="cellWithoutBackground" data-id="' + cellvalue.Id + '" style="background-color:' + cellvalue.color + '">' + cellvalue.descr + '</span>';
     }
 
-    function loadError(jqXHR, textStatus, errorThrown) {
-        var status = jqXHR.status;
-        var title = textStatus;
-        var message = errorThrown;
-
-        if (!jqXHR.responseJSON) {
-            try {
-                jqXHR.responseJSON = $.parseJSON(jqXHR.responseText);
-            }
-            catch (ignore) { }
-        }
-        if (jqXHR.responseJSON) {
-            var odataerr = jqXHR.responseJSON["@odata.error"] || jqXHR.responseJSON["odata.error"] || jqXHR.responseJSON["error"];
-            if (odataerr) {
-                if (odataerr.innererror) {
-                    if (odataerr.innererror.internalexception) {
-                        title = odataerr.innererror.internalexception.message;
-                        message = odataerr.innererror.internalexception.stacktrace || '';
-                    }
-                    else {
-                        title = odataerr.innererror.message;
-                        message = odataerr.innererror.stacktrace || '';
-                    }
-                }
-                else {
-                    title = odataerr.message.value || odataerr.message;
-                    message = odataerr.stacktrace || '';
-                }
-            }
-        }
-        else if(errorThrown && $.isPlainObject(errorThrown)) {
-            title = errorThrown.message;
-            message = errorThrown.stack;
-            status = errorThrown.code;
-        }
-
-        var errstring = "<div>Status/error code: " + status + "</div><div>Message: " + title + '</div><div style="font-size: 0.8em;">' + message + '</div><br/>';
-
-        return errstring;
-    }
-
-    var colModelDefinition = [
+   /* var colModelDefinition = [
         {
             label: 'Client Id', name: 'id', index: 'id', editable: false, searchrules: { integer: true },
             formatter: function (cellvalue, options, rowObject) { return '<a href="#" target="_self" data-id="' + cellvalue + '">' + cellvalue + '</a>'; },
@@ -94,22 +53,24 @@ $(document).ready(function () {
             searchrules: { integer: true }, edittype: 'select', stype: 'select',
             odataunformat: function (searchField, searchString, searchOper) { return searchString !== '-1' ? 'status/Id' : null; }
         }
-    ];
+    ];*/
 
+    //3,xml,xml,http://services.odata.org/V3/(S(o3gw2dlhw31znr3sglld2njz))/OData/OData.svc/Products
     var odatainit = {
         annotations: false,
         metadatatype: 'xml',
-        datatype: 'xml',
-        version: 3,
+        datatype: 'json',
+        version: 4,
         gencolumns: true,
-        entityType: 'Product',
-        odataurl: "http://services.odata.org/V3/(S(o3gw2dlhw31znr3sglld2njz))/OData/OData.svc/Products",
-        metadataurl: 'http://services.odata.org/V3/(S(o3gw2dlhw31znr3sglld2njz))/OData/OData.svc/$metadata',
-        errorfunc: function (jqXHR, textStatus, errorThrown) {
+        entitySet: 'Products',
+        expandable: 'subgrid',
+        odataurl: "http://services.odata.org/V4/OData/OData.svc/Products",
+        metadataurl: 'http://services.odata.org/V4/OData/OData.svc/$metadata',
+        errorfunc: function (jqXHR, parsedError) {
             jqXHR = jqXHR.xhr || jqXHR;
-            var errstring = loadError(jqXHR, textStatus, errorThrown);
-            errstring = $('#errdialog').html() + errstring;
-            $('#errdialog').html(errstring).dialog('open');
+            jqXHR = jqXHR.xhr || jqXHR;
+            parsedError = $('#errdialog').html() + parsedError;
+            $('#errdialog').html(parsedError).dialog('open');
         },
         odataverbs: {
             inlineEditingAdd: 'PUT',
@@ -118,16 +79,6 @@ $(document).ready(function () {
             formEditingEdit: 'POST'
         }
     };
-
-    if(window.location.search){
-        var sPageURL = window.location.search.substring(1);
-        var sURLVariables = sPageURL.split('&');
-        for (var i = 0; i < sURLVariables.length; i++) {
-            var sParameterName = sURLVariables[i].split('=');
-            if (sParameterName[0] === 'entityType') { odatainit.entityType = decodeURIComponent(sParameterName[1]); }
-            if (sParameterName[0] === 'odataurl') { odatainit.odataurl = decodeURIComponent(sParameterName[1]); }
-        }
-    }
 
     function initODataTable() {
         $("#grid").jqGrid({
@@ -147,7 +98,7 @@ $(document).ready(function () {
             sortable: true,
             autowidth: true,
             toppager: true,
-            rowNum: 25,
+            rowNum: 5,
             toolbar: [true, 'top'],
             url: '',
             ondblClickRow: function (id) {
@@ -160,31 +111,30 @@ $(document).ready(function () {
             },
             multiSort: true,
             iconSet: "jQueryUI",
-            //colModel: colModelDefinition,
             loadError: function (jqXHR, textStatus, errorThrown) {
-                var errstring = loadError(jqXHR, textStatus, errorThrown);
-                errstring = $('#errdialog').html() + errstring;
-                $('#errdialog').html(errstring).dialog('open');
+                var parsedError = $.jgrid.odataHelper.loadError(jqXHR, textStatus, errorThrown);
+                parsedError = $('#errdialog').html() + parsedError;
+                $('#errdialog').html(parsedError).dialog('open');
             },
             beforeInitGrid: function () {
                 $(this).jqGrid('odataInit', odatainit);
             }
         })
-            .jqGrid("navGrid", "#pg_grid_toppager", { add: true, del: true, edit: true, view: true, reload: true, search: false, cloneToTop: true },
-            {
-                closeAfterEdit: true
-            },
-            {
-                closeAfterAdd: true
-            })
-            .jqGrid('inlineNav', "#pg_grid_toppager", {
-                add: true, edit: false, save: true, cancel: false,
-                editParams: {
-                    keys: true
-                }
-            })
-            .jqGrid('filterToolbar', { searchOnEnter: false, enableClear: false, stringResult: true })
-            .jqGrid('searchGrid', { multipleSearch: true, multipleGroup: false, overlay: 0 });
+        .jqGrid("navGrid", "#pg_grid_toppager", { add: true, del: true, edit: true, view: true, reload: true, search: false, cloneToTop: true },
+        {
+            closeAfterEdit: true
+        },
+        {
+            closeAfterAdd: true
+        })
+        .jqGrid('inlineNav', "#pg_grid_toppager", {
+            add: true, edit: false, save: true, cancel: false,
+            editParams: {
+                keys: true
+            }
+        })
+        .jqGrid('filterToolbar', { searchOnEnter: false, enableClear: false, stringResult: true })
+        .jqGrid('searchGrid', { multipleSearch: true, multipleGroup: false, overlay: 0 });
 
         $('#searchmodfbox_grid').css('position', 'initial');
         $('#searchmodfbox_grid').appendTo('#new_fbox_grid');
