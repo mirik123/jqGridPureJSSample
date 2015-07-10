@@ -59,7 +59,7 @@ $(document).ready(function () {
     var odatainit = {
         annotations: false,
         metadatatype: 'xml',
-        datatype: 'xml',
+        datatype: 'json',
         version: 4,
         gencolumns: true,
         entitySet: 'Products',
@@ -98,7 +98,7 @@ $(document).ready(function () {
             sortable: true,
             autowidth: true,
             toppager: true,
-            rowNum: 25,
+            rowNum: 5,
             toolbar: [true, 'top'],
             url: '',
             ondblClickRow: function (id) {
